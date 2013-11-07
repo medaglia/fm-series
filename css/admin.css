@@ -1,0 +1,22 @@
+.sortable li{
+	border:1px solid #ccc;
+	border-bottom:1px solid #bbb;
+	border-top:1px solid #eee;
+	padding:5px 10px;
+	cursor:pointer;
+	margin-bottom:2px;
+	font-weight:bold;
+	color:#444;
+	text-shadow:0 1px 0 #fff;
+	background:#ddd;
+	border-radius:3px;
+}
+.sortable li.ui-sortable-helper{
+	background:#eef;
+	border:1px solid #ccd;
+}
+.sortable li .index{
+	color:#777;
+	margin-right:6px;
+	font-weight:normal;
+}
