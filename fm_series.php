@@ -240,6 +240,7 @@ EOL;
 			'post_type' => 'fmp_people',
 			'fm_series' => $tag->slug,
 			'posts_per_page' => -1,
+			'post_status' => array('publish','pending','draft','future','private'),
 			//'tax_query' => array(),
 		);
 		$posts = get_posts($args);
@@ -270,15 +271,17 @@ EOL;
 			
 			// Display posts which have no specified order last
 			foreach($series_posts as $id => $p){
-				echo "<li class=\"order_not_set\"><span class='index'></span> {$p->post_title}";
+				$pstatus = ($p->post_status == 'publish')? '' : "({$p->post_status})";
+				echo "<li class=\"order_not_set\"><span class='index'></span> {$p->post_title} $pstatus";
 				echo '<input class="sort-person" type="hidden" name="sort_person[]" value="' . $p->ID . '"/>';
+
 				echo "</li>\n";
 				$i++;
 			}
 			echo "</ul>";
 		} else {
 			echo '<p class="description">
-				There are not posts assigned to this series. You 
+				There are no posts assigned to this series. You 
 				<a href="http://www.filmmakermagazine.com/news/wp-admin/edit.php?post_type=fmp_people">assign posts using Quick Edit here.</a>
 				</p>';
 		}
