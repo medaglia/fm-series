@@ -62,8 +62,8 @@ class FMSeries{
     function get_tab_names($tax_id){
         if($tax_id){
             $term_meta = get_option( "taxonomy_$tax_id" );
-            if(!empty($term_meta[tab_names])){
-                return $term_meta[tab_names];
+            if(!empty($term_meta['tab_names'])){
+                return $term_meta['tab_names'];
             } else {
                 return FMSeries::default_tab_names();
             }
@@ -118,7 +118,7 @@ class FMSeries{
     }
     
     // update all posted related toa series
-    public function update_series_enabled($enable = 1, $tag_id, $taxonomy) {
+    public function update_series_enabled($enable = 1, $tag_id) {
         $posts = FMSeries::get_all_posts_in_series($tag_id);
         $post_keys = array_keys($posts);
         $status = $enable == 1 ? 'publish' : 'draft';
@@ -367,8 +367,11 @@ EOL;
     }   
     
     
-    // Returns usefull data for this series (next link, prev link, number in series, etc)
+    // Returns useful data for this series (next link, prev link, number in series, etc)
     function get_data($term, $post_id = null){
+        if (!$term)
+            return array();
+
         $id = $term->term_id;
         $term_meta = get_option( "taxonomy_$id" );
         $order = $term_meta['order'];
@@ -448,7 +451,7 @@ EOL;
             // Populate $series_data with series specific metadata
             global $series_data;
             $series_data = FMSeries::get_data(get_term_by('slug', $query->query_vars['fm_series'], 'fm_series'));
-                    
+
             // Setup the Loop
             $query->set('posts_per_page', 100);
             
