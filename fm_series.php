@@ -101,6 +101,14 @@ class FMSeries{
 	        		}
 	        	}
 	        }
+	        // check to see if the series_enabled is on or off
+	        if ($_POST['term_meta']['series_enabled'] != 'on' && $_POST['term_meta']['series_enabled'] != 1) {
+	          $term_meta['series_enabled'] = 0;
+	          FMSeries::update_series_enabled(0, $t_id);
+	        } else {
+	          $term_meta['series_enabled'] = 1;
+	          FMSeries::update_series_enabled(1, $t_id);
+	        }
 	    }
 	    	    
 	    if(isset($_POST['sort_person'])){
@@ -108,8 +116,48 @@ class FMSeries{
 	    }
 	    
 		// Save the option array.
-		update_option( "taxonomy_$t_id", $term_meta );
-	}  
+		update_option("taxonomy_$t_id", $term_meta);
+	}
+	
+	// update all posted related toa series
+  public function update_series_enabled($enable = 1, $tag_id, $taxonomy) {
+    
+    $posts = FMSeries::get_all_posts_in_series($tag_id);
+    $post_keys = array_keys($posts);
+    $status = $enable == 1 ? 'publish' : 'draft';
+    
+    foreach ($post_keys as $post_id) {
+      wp_update_post(array('ID' => $post_id, 'post_status' => $status));
+    }
+    
+  }
+  
+  public function get_all_posts_in_series($t_id) {
+    
+    // Get all posts in this series.
+		$args = array(
+			'post_type' => 'fmp_people',
+		  'tax_query' => array(
+		    array(
+		      'taxonomy' => 'fm_series',
+		      'field' => 'term_id',
+		      'terms' => $t_id
+		    )
+		  ),
+		  'posts_per_page' => -1,
+			'post_status' => array('publish','pending','draft','future','private'),
+			//'tax_query' => array(),
+		);
+		$posts = get_posts($args);
+		
+		$series_posts = array();
+		foreach($posts as $p){
+			$series_posts[$p->ID] = $p;
+		}
+		
+		return $series_posts;
+		
+  }
 
 
 
@@ -118,6 +166,7 @@ class FMSeries{
 		$cols = $gallery_columns;
 		unset($cols['description']);
 		$cols['post_type'] = 'Type';
+		$cols['series_enabled'] = 'Series Enabled';
 		return $cols;
 	}
 
@@ -126,9 +175,12 @@ class FMSeries{
 	// Custom columns for People
 	public function custom_column($something, $column, $term_id){
 		$term_meta = get_option( "taxonomy_$term_id" );
+
 		if ("post_type" == $column){
 			echo $term_meta['post_type'];
-		}  
+		} elseif ($column == 'series_enabled') {
+		  echo $term_meta['series_enabled'] == 1 ? 'Yes' : 'No';
+		}
 	}
 
  
@@ -141,6 +193,7 @@ class FMSeries{
 	    $type = esc_attr( $term_meta['post_type'] );
 	    $banner = esc_attr( $term_meta['banner']);
 	    $splash_img = esc_attr( $term_meta['splash_img']);
+	    $series_enabled = $term_meta['series_enabled'] == '1' ? 'checked="checked"' : '';
 	    $options = array('default','numbered');
 	    $tab_names = $term_meta['tab_names'];
 	    	    
@@ -159,6 +212,17 @@ class FMSeries{
 	    	$selectedHtml = ($o == $type)? 'SELECTED': '';
 	    	$optionsHtml .= "<option $selectedHtml value=\"$o\">$o</option>\n";
 	    }
+	    
+	    // Enable Series
+	    echo <<<EOL
+	    <tr class="form-field">
+		    <th scope="row" valign="top"><label for="term_meta[series_enabled]">Enable Series</label></th>
+		   	<td>
+		   		<input type="checkbox" name="term_meta[series_enabled]" $series_enabled />
+		   		<p class="description">Set all posts to Published or Draft for the series.</p>
+		    </td>
+		  </tr>
+EOL;
 	    echo <<<EOL
 		<tr class="form-field">
 		    <th scope="row" valign="top"><label for="cat_Image_url">List Style</label></th>
@@ -179,7 +243,7 @@ EOL;
 		    </th>
 		   	<td>
 	        	<input type="text" name="term_meta[splash_img]" value="$splash_img" size="40" />
-	      		<p class="description">620px x 280px. Shown on the series index page. Please use a full URL (i.e. http://www.blah.com/images/myimage.jpg)</p>
+	      		<p class="description">900px x 400px. Shown on the series index page. Please use a full URL (i.e. http://www.blah.com/images/myimage.jpg)</p>
 	        </td>
 	    </tr>
 EOL;
@@ -240,6 +304,7 @@ EOL;
 			'post_type' => 'fmp_people',
 			'fm_series' => $tag->slug,
 			'posts_per_page' => -1,
+			'post_status' => array('publish','pending','draft','future','private'),
 			//'tax_query' => array(),
 		);
 		$posts = get_posts($args);
@@ -270,15 +335,17 @@ EOL;
 			
 			// Display posts which have no specified order last
 			foreach($series_posts as $id => $p){
-				echo "<li class=\"order_not_set\"><span class='index'></span> {$p->post_title}";
+				$pstatus = ($p->post_status == 'publish')? '' : "({$p->post_status})";
+				echo "<li class=\"order_not_set\"><span class='index'></span> {$p->post_title} $pstatus";
 				echo '<input class="sort-person" type="hidden" name="sort_person[]" value="' . $p->ID . '"/>';
+
 				echo "</li>\n";
 				$i++;
 			}
 			echo "</ul>";
 		} else {
 			echo '<p class="description">
-				There are not posts assigned to this series. You 
+				There are no posts assigned to this series. You 
 				<a href="http://www.filmmakermagazine.com/news/wp-admin/edit.php?post_type=fmp_people">assign posts using Quick Edit here.</a>
 				</p>';
 		}
@@ -327,6 +394,7 @@ EOL;
 		$data['next_id'] = null;
 		$data['post_type'] = $term_meta['post_type'];
 		$data['banner'] = $term_meta['banner'];
+		$data['series_enabled'] = $term_meta['series_enabled'];
 		$data['splash_img'] = $term_meta['splash_img'];
 		$data['content'] = $term_meta['my_content'];
 		$data['tab_names'] = $term_meta['tab_names'];
