@@ -370,11 +370,10 @@ EOL;
     // Returns usefull data for this series (next link, prev link, number in series, etc)
     function get_data($term, $post_id = null){
         $id = $term->term_id;
-        //print_r($term);
         $term_meta = get_option( "taxonomy_$id" );
         $order = $term_meta['order'];
         $data['order'] = $order;
-        $data['total'] = count($order);
+        $data['total'] = $order ? count($order) : 0;
         $data['prev_id'] = null;
         $data['next_id'] = null;
         $data['post_type'] = $term_meta['post_type'];
@@ -441,19 +440,22 @@ EOL;
     }
     
     
-    //Tasks related to accurate rendering of series main list view */
+    // Tasks related to accurate rendering of series main list view
     function create_list_view( $query ) {
         $series = $query->query_vars['fm_series'];
         if ( $series && is_archive()) {
             
-            //Populate $series_data with series specific metadata
+            // Populate $series_data with series specific metadata
             global $series_data;
             $series_data = FMSeries::get_data(get_term_by('slug', $query->query_vars['fm_series'], 'fm_series'));
-        
-                //Setup the Loop            
-                $query->set('posts_per_page', 100);
+                    
+            // Setup the Loop
+            $query->set('posts_per_page', 100);
+            
+            if (isset($series_data['order'])) {
                 $query->set('post__in', array_reverse($series_data['order']));
                 $query->set('orderby', 'post__in');
+            }
         }
     }
 } // End Class FMSeries
